@@ -2,7 +2,7 @@
 
 This is the official implementation of the FPCD paper that uses a diffusion model to generate particle jets while [progressive distillation](https://arxiv.org/abs/2202.00512) is used to accelerate the generation.
 
-[](./assets/FPCD.png)
+[Visualization of FPCD](./assets/FPCD.png)
 
 # Training a new model
 
