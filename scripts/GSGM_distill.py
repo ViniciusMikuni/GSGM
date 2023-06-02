@@ -17,12 +17,9 @@ class GSGM_distill(keras.Model):
             raise ValueError("Config file not given")
         
         self.factor = factor
-        self.activation = 'swish'
-        #self.activation = layers.LeakyReLU(alpha=0.01)
         self.num_feat = self.config['NUM_FEAT']
         self.num_jet = self.config['NUM_JET']
-        self.num_cond = self.config['NUM_COND']
-        self.num_embed = self.config['EMBED']
+
         self.max_part = npart
         self.shape = (-1,1,1)
         self.ema=0.999
@@ -313,7 +310,7 @@ class GSGM_distill(keras.Model):
             init_x *= mask 
 
         x = init_x
-        for  time_step in tf.range(self.num_steps, 0, delta=-1):
+        for  time_step in tf.range(self.num_steps, -1, delta=-1):
             batch_time_step = tf.ones((batch_size,1),dtype=tf.int32) * time_step
             z = tf.random.normal(x.shape,dtype=tf.float32)
 

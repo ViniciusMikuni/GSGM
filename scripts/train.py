@@ -62,12 +62,10 @@ if __name__ == "__main__":
             model = GSGM_distill(model.ema_jet,model.ema_part,factor=flags.factor//2,config=config)
             model.load_weights('{}'.format(checkpoint_folder)).expect_partial()
             #previous student, now teacher
-            model = GSGM_distill(model.ema_jet,model.ema_part,factor=flags.factor,
-                                 config=config,npart=npart)
         else:
             model.load_weights('{}'.format(checkpoint_folder)).expect_partial()
-            model = GSGM_distill(model.ema_jet,model.ema_part,factor=flags.factor,
-                                 config=config,npart=npart)
+        model = GSGM_distill(model.ema_jet,model.ema_part,factor=flags.factor,
+                             config=config,npart=npart)
 
         if hvd.rank()==0:print("Loading Teacher from: {}".format(checkpoint_folder))
         checkpoint_folder = '../checkpoints_{}_d{}/checkpoint'.format(model_name,flags.factor)

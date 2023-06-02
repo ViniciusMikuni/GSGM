@@ -221,7 +221,7 @@ class GSGM(keras.Model):
         #random_t = tf.cast(random_t,tf.float32)
         alpha = tf.gather(tf.sqrt(self.alphas_cumprod),random_t)
         sigma = tf.gather(tf.sqrt(1-self.alphas_cumprod),random_t)
-        
+        sigma = tf.clip_by_value(sigma, clip_value_min = 1e-3, clip_value_max=0.999)
         alpha_reshape = tf.reshape(alpha,self.shape)
         sigma_reshape = tf.reshape(sigma,self.shape)
             
@@ -330,7 +330,7 @@ class GSGM(keras.Model):
         x = init_x
         
         
-        for  time_step in tf.range(self.num_steps, 0, delta=-1):
+        for time_step in tf.range(self.num_steps, -1, delta=-1):
             batch_time_step = tf.ones((batch_size,1),dtype=tf.int32) * time_step
             z = tf.random.normal(x.shape,dtype=tf.float32)
 
@@ -340,7 +340,7 @@ class GSGM(keras.Model):
             if jet is None:
                 score = model([x, batch_time_step,cond],training=False)
             else:
-                score = model([x, batch_time_step,jet,cond,mask],training=False)
+                score = model([x*mask, batch_time_step,jet,cond,mask],training=False)*mask
                 alpha = tf.reshape(alpha,self.shape)
                 sigma = tf.reshape(sigma,self.shape)
             

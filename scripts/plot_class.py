@@ -92,5 +92,8 @@ class PlottingConfig():
                 1 : 12,
                 2 : 120,
             }
+            if self.one_class:
+                binning_dict[0] = 6
+                binning_dict[1] = 6
             
         return binning_dict[self.idx]

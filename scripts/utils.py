@@ -8,7 +8,7 @@ import matplotlib.ticker as mtick
 from sklearn.utils import shuffle
 import tensorflow as tf
 from keras.utils.np_utils import to_categorical
-import energyflow as ef
+#import energyflow as ef
 
 np.random.seed(0) #fix the seed to keep track of validation split
 
@@ -30,6 +30,9 @@ line_style = {
 
     't_gen_d64':'dotted',
     't_gen_d256':'dotted',
+
+    'toy_truth':'dotted',
+    'toy_gen':'-',
     
 }
 
@@ -52,7 +55,8 @@ colors = {
 
     't_gen_d64':'red',
     't_gen_d256':'blue',
-
+    'toy_truth':'red',
+    'toy_gen':'blue',
 }
 
 name_translate={
@@ -74,9 +78,19 @@ name_translate={
 
     't_gen_d64':'FPCD: top 8 steps',
     't_gen_d256':'FPCD: top 2 steps',
-    }
+
+    'toy_truth':'toy true',
+    'toy_gen':'toy gen',
+}
 
 names = ['g','q','t','w','z']
+
+
+# labels30 = {
+#     'g.hdf5':0,
+#     't.hdf5':1,
+# }
+
 
 labels30 = {
     'g.hdf5':0,
@@ -93,6 +107,12 @@ labels150 = {
     'w150.hdf5':3,
     'z150.hdf5':4,
 }
+
+
+# labels150 = {
+#     'g150.hdf5':0,
+#     't150.hdf5':1,
+# }
 
 nevts = -1
 num_classes = 5
@@ -123,7 +143,8 @@ def SetStyle():
     import matplotlib.pyplot as plt
     import mplhep as hep
     hep.set_style(hep.style.CMS)
-    hep.style.use("CMS") 
+    
+    # hep.style.use("CMS") 
 
 def SetGrid(ratio=True):
     fig = plt.figure(figsize=(9, 9))
@@ -454,4 +475,4 @@ def DataLoader(data_path,labels,
         cond = np.concatenate([cond,np.zeros(shape=(cond.shape[0],num_classes-num_classes_eval),
                                              dtype=np.float32)], -1)
         mask = np.expand_dims(particles[:nevts,:,-1],-1)
-        return particles[:nevts,:,:-1]*mask,jets[:nevts,:-1],cond
+        return particles[:nevts,:,:-1]*mask,jets[:nevts,:-1],cond, mask

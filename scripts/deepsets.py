@@ -26,7 +26,8 @@ def DeepSetsAtt(
     time = layers.Dense(2*projection_dim,activation=None)(time_embedding)
     time = layers.LeakyReLU(alpha=0.01)(time)
     time = layers.Dense(projection_dim)(time)
-    time = tf.reshape(time,(-1,1,tf.shape(time)[-1]))
+
+    time = layers.Reshape((1,-1))(time)
     time = tf.tile(time,(1,tf.shape(inputs)[1],1))
 
     
