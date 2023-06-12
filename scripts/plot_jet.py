@@ -113,7 +113,7 @@ if __name__ == "__main__":
         labels=utils.labels30
         npart=30
 
-    particles,jets,flavour = utils.DataLoader(flags.data_folder,
+    particles,jets,flavour,_ = utils.DataLoader(flags.data_folder,
                                               labels=labels,
                                               npart=npart,
                                               make_tf_data=False)
