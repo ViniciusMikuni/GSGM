@@ -10,7 +10,6 @@ import utils
 from GSGM import GSGM
 from GSGM_distill import GSGM_distill
 from tensorflow.keras.callbacks import ModelCheckpoint
-import tensorflow_addons as tfa
 import horovod.tensorflow.keras as hvd
 
 tf.random.set_seed(1233)
@@ -26,9 +25,11 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()    
     parser.add_argument('--config', default='config_jet.json', help='Config file with training parameters')
-    parser.add_argument('--data_path', default='/global/cfs/cdirs/m3929/GSGM', help='Path containing the training files')
+    #parser.add_argument('--data_path', default='/global/cfs/cdirs/m3929/GSGM', help='Path containing the training files')
+    parser.add_argument('--data_path', default='/pscratch/sd/v/vmikuni/GSGM', help='Path containing the training files')
     parser.add_argument('--distill', action='store_true', default=False,help='Use the distillation model')
     parser.add_argument('--big', action='store_true', default=False,help='Use bigger dataset (150 particles) as opposed to 30 particles')
+    parser.add_argument('--load', action='store_true', default=False,help='Use bigger dataset (150 particles) as opposed to 30 particles')
     parser.add_argument('--factor', type=int,default=1, help='Step reduction for distillation model')
 
 
@@ -36,7 +37,7 @@ if __name__ == "__main__":
     config = utils.LoadJson(flags.config)
 
     assert flags.factor%2==0 or flags.factor==1, "Distillation reduction steps needs to be even"
-
+    assert flags.load * flags.distill == False, "Only baseline model can be loaded to continue training"
     if flags.big:
         labels = utils.labels150
         npart=150
@@ -70,12 +71,20 @@ if __name__ == "__main__":
         if hvd.rank()==0:print("Loading Teacher from: {}".format(checkpoint_folder))
         checkpoint_folder = '../checkpoints_{}_d{}/checkpoint'.format(model_name,flags.factor)
         
+    elif flags.load:
+        model.load_weights('{}'.format(checkpoint_folder)).expect_partial()
+        # config['MAXEPOCH'] = 100
+        # config['EARLYSTOP'] = 20
+        # config['LR'] = 1e-4
         
     lr_schedule = tf.keras.experimental.CosineDecay(
         initial_learning_rate=config['LR']*hvd.size(),
-        decay_steps=config['MAXEPOCH']*int(data_size*0.8/config['BATCH'])
+        decay_steps=config['MAXEPOCH']*int(data_size*0.9/config['BATCH']),
+        #alpha = 1e-3,
     )
     opt = tf.keras.optimizers.Adamax(learning_rate=lr_schedule)
+
+
     opt = hvd.DistributedOptimizer(
         opt, average_aggregated_gradients=True)
 
@@ -89,12 +98,15 @@ if __name__ == "__main__":
     callbacks = [
         hvd.callbacks.BroadcastGlobalVariablesCallback(0),
         hvd.callbacks.MetricAverageCallback(),
-        EarlyStopping(patience=100,restore_best_weights=True),
+        EarlyStopping(patience=config['EARLYSTOP'],restore_best_weights=True),
+        #hvd.callbacks.LearningRateWarmupCallback(initial_lr=config['LR']*hvd.size(), warmup_epochs=50, verbose=1),
+        #keras.callbacks.ReduceLROnPlateau(patience=20, verbose=1),
     ]
 
         
     if hvd.rank()==0:
         checkpoint = ModelCheckpoint(checkpoint_folder,mode='auto',
+                                     save_best_only=True,
                                      period=1,save_weights_only=True)
         callbacks.append(checkpoint)
         
@@ -103,7 +115,7 @@ if __name__ == "__main__":
         training_data,
         epochs=config['MAXEPOCH'],
         callbacks=callbacks,
-        steps_per_epoch=int(data_size*0.8/config['BATCH']),
+        steps_per_epoch=int(data_size*0.9/config['BATCH']),
         validation_data=test_data,
         validation_steps=int(data_size*0.1/config['BATCH']),
         verbose=1 if hvd.rank()==0 else 0,

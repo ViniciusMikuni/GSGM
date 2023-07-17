@@ -2,7 +2,7 @@
 
 This is the official implementation of the FPCD paper that uses a diffusion model to generate particle jets while [progressive distillation](https://arxiv.org/abs/2202.00512) is used to accelerate the generation.
 
-![Visualization of FPCD](./assets/FPCD.png)
+![Visualization of FPCD](./assets/plot_2D.png)
 
 # Training a new model
 
@@ -30,4 +30,13 @@ The command will generate new observations with optional flags to load the disti
 The calculation os the physics inspired metrics is taken directly from the [JetNet](https://github.com/jet-net/JetNet) repository, thus also need to be cloned. Notice that while our implementation is carried out using TensorFlow while the physics inspired metrics are implemented in Pytorch.
 
 Out distillation model is partially based on a [Pytorch implementation](https://github.com/Hramchenko/diffusion_distiller).
+
+# Using pre-trained checkpoints
+
+Pretrained checkpoints for 30 and 150 particle datasets are provided for both the initial FPCD model (using 512 steps during generation) and the distilled model for single-shot generation. Those can be directly sampled using the commands
+
+```bash
+python plot_jet.py [--distill --factor 512] [--big] --sample
+```
+
 

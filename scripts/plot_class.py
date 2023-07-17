@@ -37,18 +37,18 @@ class PlottingConfig():
     def get_binning(self):
         if self.name == 'jet':
             binning_dict = {
-                0 : np.linspace(700,1800,15),
-                1 : np.linspace(-2.,2.,15),
-                2 : np.linspace(50,200,15),
-                3 : np.linspace(10,30,15),                
+                0 : np.linspace(600,1800,45),
+                1 : np.linspace(-2.,2.,45),
+                2 : np.linspace(50,200,30),
+                3 : np.linspace(10,30,20),                
             }
             if self.big:
-                binning_dict[3] = np.linspace(5,150,20)
+                binning_dict[3] = np.linspace(5,150,50)
         else:
             binning_dict = {
-                0 : np.linspace(-0.5,0.5,20),
-                1 : np.linspace(-0.5,0.5,20),
-                2 : np.linspace(0,0.8,20),
+                0 : np.linspace(-0.4,0.4,40),
+                1 : np.linspace(-0.4,0.4,40),
+                2 : np.linspace(0,0.8,40),
             }
             
         return binning_dict[self.idx]
@@ -78,19 +78,19 @@ class PlottingConfig():
             binning_dict = {
                 0 : 0.1,
                 1 : 0.7,
-                2 : 0.07,
+                2 : 0.12,
                 3 : 5.0,                
             }
             if self.big:
                 binning_dict[3] = 0.5
             if self.one_class:
-                binning_dict[2] = 0.03
+                binning_dict[2] = 0.05
 
         else:
             binning_dict = {
-                0 : 12,
-                1 : 12,
-                2 : 120,
+                0 : 18,
+                1 : 18,
+                2 : 140,
             }
             if self.one_class:
                 binning_dict[0] = 6

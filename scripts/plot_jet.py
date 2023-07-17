@@ -13,7 +13,7 @@ import time
 import gc
 import sys
 sys.path.append("JetNet")
-from jetnet.evaluation import w1p,w1m,w1efp,cov_mmd,fpnd
+from jetnet.evaluation.gen_metrics import w1p,w1m,w1efp,cov_mmd,fpnd
 from scipy.stats import wasserstein_distance
 from plot_class import PlottingConfig
 
@@ -90,7 +90,8 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--data_folder', default='/global/cfs/cdirs/m3929/GSGM', help='Folder containing data and MC files')
+    #parser.add_argument('--data_folder', default='/global/cfs/cdirs/m3929/GSGM', help='Folder containing data and MC files')
+    parser.add_argument('--data_folder', default='/pscratch/sd/v/vmikuni/GSGM', help='Folder containing data and MC files')
     parser.add_argument('--plot_folder', default='../plots', help='Folder to save results')
     parser.add_argument('--config', default='config_jet.json', help='Training parameters')
     
@@ -98,6 +99,7 @@ if __name__ == "__main__":
     parser.add_argument('--distill', action='store_true', default=False,help='Use the distillation model')
     parser.add_argument('--test', action='store_true', default=False,help='Test if inverse transform returns original data')
     parser.add_argument('--big', action='store_true', default=False,help='Use bigger dataset (150 particles) as opposed to 30 particles')
+    parser.add_argument('--skip_metric', action='store_true', default=False,help='Skip the calculation of the metrics')
     parser.add_argument('--sample', action='store_true', default=False,help='Sample from the generative model')
     parser.add_argument('--comp', action='store_true', default=False, help='Compare the results for diffusion models with different diffusion steps')
     parser.add_argument('--factor', type=int,default=1, help='Step reduction for distillation model')
@@ -117,21 +119,19 @@ if __name__ == "__main__":
                                               labels=labels,
                                               npart=npart,
                                               make_tf_data=False)
+    model_name = config['MODEL_NAME']
+    if flags.big:
+        model_name+='_big'
 
+    sample_name = model_name
+    if flags.distill:
+        sample_name += '_d{}'.format(flags.factor)
+
+    
     if flags.test:
         particles_gen,jets_gen,flavour_gen = utils.SimpleLoader(flags.data_folder,labels=labels)
     else:
         
-        model_name = config['MODEL_NAME']
-        if flags.big:
-            model_name+='_big'
-
-        sample_name = model_name
-        if flags.distill:
-            sample_name += '_d{}'.format(flags.factor)
-
-
-
         if flags.sample:            
             model = GSGM(config=config,factor=flags.factor,npart=npart)
             checkpoint_folder = '../checkpoints_{}/checkpoint'.format(model_name)
@@ -155,8 +155,10 @@ if __name__ == "__main__":
     
             particles_gen = np.concatenate(particles_gen)
             jets_gen = np.concatenate(jets_gen)
-            
-            particles_gen,jets_gen= utils.ReversePrep(particles_gen,jets_gen,npart=npart)
+
+
+            particles_gen,jets_gen= utils.ReversePrep(particles_gen,jets_gen,npart=npart,
+                                                      flavour=np.argmax(flavour,-1))
             jets_gen = np.concatenate([jets_gen,np.expand_dims(np.argmax(flavour,-1),-1)],-1)
 
             with h5.File(os.path.join(flags.data_folder,sample_name+'.h5'),"w") as h5f:
@@ -171,53 +173,57 @@ if __name__ == "__main__":
         flavour_gen = jets_gen[:,-1]
         assert np.all(flavour_gen == np.argmax(flavour,-1)), 'The order between the particles dont match'
         jets_gen = jets_gen[:,:-1]
-            
-    particles,jets= utils.ReversePrep(particles,jets,npart=npart)
+
+
+    particles,jets= utils.ReversePrep(particles,jets,npart=npart,
+                                      flavour=flavour_gen)
     plot(jets,jets_gen,flavour,flavour,title='jet',
          nplots=4,plot_folder=flags.plot_folder,is_big=flags.big)
-    
-    print("Calculating metrics")
 
-    with open(sample_name+'.txt','w') as f:
-        for unique in np.unique(np.argmax(flavour,-1)):
-            mask = np.argmax(flavour,-1)== unique
-            print(utils.names[unique])
-            f.write(utils.names[unique])
-            f.write("\n")
-            mean_mass,std_mass = w1m(particles[mask], particles_gen[mask])
-            print("W1M",mean_mass,std_mass)
-            f.write("{:.2f} $\pm$ {:.2f} & ".format(1e3*mean_mass,1e3*std_mass))            
-            mean,std = w1p(particles[mask], particles_gen[mask])
-            print("W1P: ",np.mean(mean),mean,np.mean(std))
-            f.write("{:.2f} $\pm$ {:.2f} & ".format(1e3*np.mean(mean),1e3*np.mean(std)))
-            mean_efp,std_efp = w1efp(particles[mask], particles_gen[mask])
-            print("W1EFP",np.mean(mean_efp),np.mean(std_efp))
-            f.write("{:.2f} $\pm$ {:.2f} & ".format(1e5*np.mean(mean_efp),1e5*np.mean(std_efp)))
-            if flags.big or 'w' in utils.names[unique] or 'z' in utils.names[unique]:
-                #FPND only defined for 30 particles and not calculated for W and Z
-                pass
-            else:
-                fpnd_score = fpnd(particles_gen[mask], jet_type=utils.names[unique])
-                print("FPND", fpnd_score)
-                f.write("{:.2f} & ".format(fpnd_score))
+    if not flags.skip_metric:
+        print("Calculating metrics")
+
+        with open(sample_name+'.txt','w') as f:
+            for unique in np.unique(np.argmax(flavour,-1)):
+                mask = np.argmax(flavour,-1)== unique
+                print(utils.names[unique])
+                f.write(utils.names[unique])
+                f.write("\n")
+
+                mean_mass,std_mass = w1m(particles[mask], particles_gen[mask])
+                print("W1M",mean_mass,std_mass)
+                f.write("{:.2f} $\pm$ {:.2f} & ".format(1e3*mean_mass,1e3*std_mass))            
+                mean,std = w1p(particles[mask], particles_gen[mask])
+                print("W1P: ",np.mean(mean),mean,np.mean(std))
+                f.write("{:.2f} $\pm$ {:.2f} & ".format(1e3*np.mean(mean),1e3*np.mean(std)))
+                mean_efp,std_efp = w1efp(particles[mask], particles_gen[mask])
+                print("W1EFP",np.mean(mean_efp),np.mean(std_efp))
+                f.write("{:.2f} $\pm$ {:.2f} & ".format(1e5*np.mean(mean_efp),1e5*np.mean(std_efp)))
+                if flags.big or 'w' in utils.names[unique] or 'z' in utils.names[unique]:
+                    #FPND only defined for 30 particles and not calculated for W and Z
+                    pass
+                else:
+                    fpnd_score = fpnd(particles_gen[mask], jet_type=utils.names[unique])
+                    print("FPND", fpnd_score)
+                    f.write("{:.2f} & ".format(fpnd_score))
                 
-            cov,mmd = cov_mmd(particles[mask],particles_gen[mask],num_eval_samples=1000)
-            print("COV,MMD",cov,mmd)
-            f.write("{:.2f} & {:.2f} \\\\".format(cov,mmd))
-            f.write("\n")
+                cov,mmd = cov_mmd(particles[mask],particles_gen[mask],num_eval_samples=1000)
+                print("COV,MMD",cov,mmd)
+                f.write("{:.2f} & {:.2f} \\\\".format(cov,mmd))
+                f.write("\n")
             
 
-        for unique in np.unique(np.argmax(flavour,-1)):
-            mask = np.argmax(flavour,-1)== unique
+            for unique in np.unique(np.argmax(flavour,-1)):
+                mask = np.argmax(flavour,-1)== unique
             
-            print("Jet "+utils.names[unique])
-            f.write("Jet "+utils.names[unique])
-            f.write("\n")
-            for i in range(jets_gen.shape[-1]):
-                mean,std=W1(jets_gen[:,i],jets[:,i])
-                print("W1J {:.2f}: {:.2f}".format(i,mean[0],std[0]))
-                f.write("{:.3f} $\pm$ {:.3f} & ".format(np.mean(mean),np.mean(std)))
-            f.write("\\ \n")
+                print("Jet "+utils.names[unique])
+                f.write("Jet "+utils.names[unique])
+                f.write("\n")
+                for i in range(jets_gen.shape[-1]):
+                    mean,std=W1(jets_gen[:,i],jets[:,i])
+                    print("W1J {:.2f}: {:.2f}".format(i,mean[0],std[0]))
+                    f.write("{:.3f} $\pm$ {:.3f} & ".format(np.mean(mean),np.mean(std)))
+                f.write("\\ \n")
         
     flavour = np.tile(np.expand_dims(flavour,1),(1,particles_gen.shape[1],1)).reshape((-1,flavour.shape[-1]))
 
