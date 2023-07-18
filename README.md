@@ -4,6 +4,17 @@ This is the official implementation of the FPCD paper that uses a diffusion mode
 
 ![Visualization of FPCD](./assets/plot_2D.png)
 
+# Docker Container
+You can fine the docker image to run the scripts in the following [link](https://hub.docker.com/layers/vmikuni/tensorflow/ngc-22.08-tf2-v0/images/sha256-2bfbd4e3af2564a1bd2d0660899a4d295d78eb015f1b1492119774817013670b?context=repo)
+
+Using shifter instead:
+
+```bash
+shifterimg -v pull vmikuni/tensorflow:ngc-22.08-tf2-v0
+shifter --image=vmikuni/tensorflow:ngc-22.08-tf2-v0 --module=gpu,nccl-2.15
+```
+
+
 # Training a new model
 
 To train a new model from scratch, first download the data with either [30 particles](https://zenodo.org/record/6975118) or [150 particles](https://zenodo.org/record/6975117).
