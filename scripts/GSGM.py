@@ -151,9 +151,8 @@ class GSGM(keras.Model):
     def train_step(self, inputs):
         part,jet,cond,mask = inputs
         part = part*mask
-        logsnr_t = tf.random.uniform((tf.shape(cond)[0],1))        
-        random_t = self.inv_logsnr_schedule_cosine(40*logsnr_t -20.)
-
+        
+        random_t = tf.random.uniform((tf.shape(cond)[0],1))        
         _, alpha, sigma = self.get_logsnr_alpha_sigma(random_t)
         
 
@@ -165,7 +164,7 @@ class GSGM(keras.Model):
             #part
             z = tf.random.normal((tf.shape(part)),dtype=tf.float32)*mask
             perturbed_x = alpha_reshape*part + z * sigma_reshape
-            pred = self.model_part([perturbed_x*mask, logsnr_t,jet,cond,mask])
+            pred = self.model_part([perturbed_x*mask, random_t,jet,cond,mask])
             
             losses = tf.square(pred - z)*mask
             
@@ -186,7 +185,7 @@ class GSGM(keras.Model):
             #jet
             z = tf.random.normal((tf.shape(jet)),dtype=tf.float32)
             perturbed_x = alpha*jet + z * sigma            
-            pred = self.model_jet([perturbed_x, logsnr_t,cond])
+            pred = self.model_jet([perturbed_x, random_t,cond])
 
             
             losses = tf.square(pred - z)
@@ -217,8 +216,7 @@ class GSGM(keras.Model):
     def test_step(self, inputs):
         part,jet,cond,mask = inputs
 
-        logsnr_t = tf.random.uniform((tf.shape(cond)[0],1))        
-        random_t = self.inv_logsnr_schedule_cosine(40*logsnr_t -20.)
+        random_t = tf.random.uniform((tf.shape(cond)[0],1))        
         
         _, alpha, sigma = self.get_logsnr_alpha_sigma(random_t)
 
@@ -230,7 +228,7 @@ class GSGM(keras.Model):
         z = tf.random.normal((tf.shape(part)),dtype=tf.float32)
         perturbed_x = alpha_reshape*part + z * sigma_reshape
 
-        score = self.model_part([perturbed_x*mask, logsnr_t,jet,cond,mask])*mask
+        score = self.model_part([perturbed_x*mask, random_t,jet,cond,mask])*mask
         losses = tf.square(score - z)*mask
         
         # v = alpha_reshape * z - sigma_reshape * part
@@ -241,7 +239,7 @@ class GSGM(keras.Model):
         #jet
         z = tf.random.normal((tf.shape(jet)),dtype=tf.float32)
         perturbed_x = alpha*jet + z * sigma            
-        score = self.model_jet([perturbed_x, logsnr_t,cond])
+        score = self.model_jet([perturbed_x, random_t,cond])
 
         losses = tf.square(score - z)
         

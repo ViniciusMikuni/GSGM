@@ -12,10 +12,6 @@ from GSGM_distill import GSGM_distill
 import time
 import gc
 import sys
-sys.path.append("JetNet")
-from jetnet.evaluation.gen_metrics import w1p,w1m,w1efp,cov_mmd,fpnd
-from scipy.stats import wasserstein_distance
-from plot_class import PlottingConfig
 
 def W1(
         jet1,
@@ -181,6 +177,11 @@ if __name__ == "__main__":
          nplots=4,plot_folder=flags.plot_folder,is_big=flags.big)
 
     if not flags.skip_metric:
+        sys.path.append("JetNet")
+        from jetnet.evaluation.gen_metrics import w1p,w1m,w1efp,cov_mmd,fpnd
+        from scipy.stats import wasserstein_distance
+        from plot_class import PlottingConfig
+
         print("Calculating metrics")
 
         with open(sample_name+'.txt','w') as f:
