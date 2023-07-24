@@ -165,9 +165,9 @@ class GSGM(keras.Model):
             z = tf.random.normal((tf.shape(part)),dtype=tf.float32)*mask
             perturbed_x = alpha_reshape*part + z * sigma_reshape
             pred = self.model_part([perturbed_x*mask, random_t,jet,cond,mask])
-            
-            losses = tf.square(pred - z)*mask
-            
+            v = alpha_reshape * z - sigma_reshape * part
+            losses = tf.square(pred - v)*mask
+
             loss_part = tf.reduce_mean(tf.reshape(losses,(tf.shape(losses)[0], -1)))
 
             
@@ -186,9 +186,9 @@ class GSGM(keras.Model):
             z = tf.random.normal((tf.shape(jet)),dtype=tf.float32)
             perturbed_x = alpha*jet + z * sigma            
             pred = self.model_jet([perturbed_x, random_t,cond])
-
+            v = alpha * z - sigma * jet
+            losses = tf.square(pred - v)
             
-            losses = tf.square(pred - z)
             loss_jet = tf.reduce_mean(tf.reshape(losses,(tf.shape(losses)[0], -1)))
 
         trainable_variables = self.model_jet.trainable_variables
@@ -228,23 +228,19 @@ class GSGM(keras.Model):
         z = tf.random.normal((tf.shape(part)),dtype=tf.float32)
         perturbed_x = alpha_reshape*part + z * sigma_reshape
 
-        score = self.model_part([perturbed_x*mask, random_t,jet,cond,mask])*mask
-        losses = tf.square(score - z)*mask
+        pred = self.model_part([perturbed_x*mask, random_t,jet,cond,mask])*mask
         
-        # v = alpha_reshape * z - sigma_reshape * part
-        # losses = tf.square(score - v)*mask
-        
+        v = alpha_reshape * z - sigma_reshape * part
+        losses = tf.square(pred - v)*mask        
         loss_part = tf.reduce_mean(tf.reshape(losses,(tf.shape(losses)[0], -1)))
                     
         #jet
         z = tf.random.normal((tf.shape(jet)),dtype=tf.float32)
         perturbed_x = alpha*jet + z * sigma            
-        score = self.model_jet([perturbed_x, random_t,cond])
-
-        losses = tf.square(score - z)
+        pred = self.model_jet([perturbed_x, random_t,cond])
         
-        # v = alpha * z - sigma * jet
-        # losses = tf.square(score - v)
+        v = alpha * z - sigma * jet
+        losses = tf.square(pred - v)
         
         loss_jet = tf.reduce_mean(tf.reshape(losses,(tf.shape(losses)[0], -1)))
         self.loss_tracker.update_state(loss_jet + loss_part)
